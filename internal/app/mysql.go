@@ -18,7 +18,7 @@ func InitMySQL() {
 		log.Fatalln("Init MySQL Error:", err)
 	}
 
-	err = model.WGDB.Sync2(new(model.Player), new(model.Transfer), new(model.Game))
+	err = model.WGDB.Sync2(new(model.Player), new(model.Transfer), new(model.Wallet), new(model.Game))
 	if err != nil {
 		log.Fatalln("AutoMigrate Error:", err)
 	}

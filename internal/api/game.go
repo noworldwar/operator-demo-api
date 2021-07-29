@@ -11,8 +11,8 @@ import (
 )
 
 const tpg_game_url = "https://stagingweblobby.triple-pg.com/we/direct2Game/202"
-const we_game_url = "https://dev-web-game-fe.wehosts247.com/"
-const we_s_id = "opbr48t0"
+const we_game_url = "dev-web-game-fe.dvweg.com/"
+const we_s_id = "jh21mvvg"
 
 func GetGameLink(c *gin.Context) {
 	token := c.Query("token")
