@@ -14,7 +14,7 @@ import (
 )
 
 const tpg_id = "xf"
-const tpg_url = "https://op-api.dvweg.com/"
+const tpg_url = "https://op-api.weapi247.com/"
 const tpg_secret = "5E0A6D572DE042581B4618D3B836581C"
 
 func TPGToken(info model.PlayerInfo) (bool, string) {

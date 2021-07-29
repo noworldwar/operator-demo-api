@@ -29,15 +29,14 @@ func GetWallet(c *gin.Context) {
 	// 取得錢包餘額
 	var data []model.Wallet
 
-	data = append(data, GetBalanceByBank("Main", info, token))
-	data = append(data, GetBalanceByBank("WE_T", info, token))
-	data = append(data, GetBalanceByBank("WE_S", info, token))
-	data = append(data, GetBalanceByBank("TPG", info, token))
+	data = append(data, GetBalanceByBank("Main", info))
+	data = append(data, GetBalanceByBank("WE_T", info))
+	data = append(data, GetBalanceByBank("TPG", info))
 
 	c.JSON(200, gin.H{"data": data})
 }
 
-func GetBalanceByBank(bank string, info model.PlayerInfo, token string) model.Wallet {
+func GetBalanceByBank(bank string, info model.PlayerInfo) model.Wallet {
 	wallet := model.Wallet{Bank: bank}
 
 	switch strings.ToLower(bank) {
@@ -50,11 +49,7 @@ func GetBalanceByBank(bank string, info model.PlayerInfo, token string) model.Wa
 			wallet.Success = true
 		}
 	case "we_t":
-		success, bal := endpoint.WEGetBalanceT(info)
-		wallet.Balance = bal / 100
-		wallet.Success = success
-	case "we_s":
-		success, bal := endpoint.WEGetBalanceS(info, token)
+		success, bal := endpoint.WEGetBalance(info)
 		wallet.Balance = bal / 100
 		wallet.Success = success
 	case "tpg":

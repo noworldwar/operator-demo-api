@@ -15,7 +15,6 @@ import (
 
 const we_id = "xf"
 const we_url = "https://dev-op-api.dvweg.com"
-const we_s_url = "http://18.218.89.217:7901"
 const we_secret = "5E0A6D572DE042581B4618D3B836581C"
 
 func WELogin(info model.PlayerInfo) (bool, string) {
@@ -47,7 +46,7 @@ func WELogin(info model.PlayerInfo) (bool, string) {
 	return true, gameURL
 }
 
-func WEGetBalanceT(info model.PlayerInfo) (bool, float64) {
+func WEGetBalance(info model.PlayerInfo) (bool, float64) {
 	data := url.Values{
 		"operatorID": {we_id},
 		"appSecret":  {we_secret},
@@ -59,33 +58,6 @@ func WEGetBalanceT(info model.PlayerInfo) (bool, float64) {
 	if status == 404 {
 		return WECreatePlayer(info), 0
 	}
-
-	if status != 200 {
-		return false, 0
-	}
-
-	var m map[string]interface{}
-	err := json.Unmarshal(result, &m)
-	if err != nil {
-		fmt.Println("WE response format error")
-		return false, 0
-	}
-
-	balance, ok := m["balance"].(float64)
-	if !ok {
-		fmt.Println("WE response balance format error")
-		return false, 0
-	}
-
-	return true, balance
-}
-
-func WEGetBalanceS(info model.PlayerInfo, token string) (bool, float64) {
-	data := url.Values{
-		"token": {token},
-	}
-
-	status, result := CallSWEAPI("balance", data)
 
 	if status != 200 {
 		return false, 0
@@ -221,46 +193,6 @@ func CallWEAPI(funcName string, data url.Values) (int, []byte) {
 	msg += fmt.Sprintf("[%s] \r\n\r\n", time.Now().Format("2006/01/02 15:04:05"))
 	msg += fmt.Sprintf("[Request] \r\nPOST %s\r\n\r\n", url)
 	msg += fmt.Sprintf("[Signature] \r\n%s\r\n\r\n", singB64)
-	msg += fmt.Sprintf("[Body] \r\n%v\r\n\r\n", data)
-	msg += fmt.Sprintf("[Status] \r\n%v\r\n\r\n", status)
-	msg += fmt.Sprintf("[Response Data] \r\n%s\r\n\r\n", strings.TrimRight(errmsg, "\n"))
-	msg += "------------------------------------------------------------\r\n"
-
-	go lib.WriteLog("we_", msg)
-
-	return status, result
-}
-
-func CallSWEAPI(funcName string, data url.Values) (int, []byte) {
-	url := we_s_url
-	status := 999
-	errmsg := ""
-	var result []byte
-
-	switch funcName {
-	case "balance":
-		url += "/api/balance"
-	}
-
-	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	clt := http.Client{}
-	rsp, err := clt.Do(req)
-	if err != nil {
-		errmsg = err.Error()
-	} else {
-		status = rsp.StatusCode
-		rspBody, _ := ioutil.ReadAll(rsp.Body)
-		errmsg = string(rspBody)
-		if rsp.StatusCode == 200 {
-			result = rspBody
-		}
-	}
-
-	msg := "------------------------------------------------------------\r\n"
-	msg += fmt.Sprintf("[%s] \r\n\r\n", time.Now().Format("2006/01/02 15:04:05"))
-	msg += fmt.Sprintf("[Request] \r\nPOST %s\r\n\r\n", url)
 	msg += fmt.Sprintf("[Body] \r\n%v\r\n\r\n", data)
 	msg += fmt.Sprintf("[Status] \r\n%v\r\n\r\n", status)
 	msg += fmt.Sprintf("[Response Data] \r\n%s\r\n\r\n", strings.TrimRight(errmsg, "\n"))
