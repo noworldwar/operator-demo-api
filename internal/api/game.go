@@ -12,7 +12,7 @@ import (
 )
 
 const tpg_game_url = "https://stagingweblobby.triple-pg.com/we/direct2Game/202"
-const we_game_url = "https://dev-web-game-fe.dvweg.com/"
+const we_game_url = "https://web-game-fe.unweg.com/"
 const we_s_id = "14e5sfbg"
 
 func GetGameLink(c *gin.Context) {

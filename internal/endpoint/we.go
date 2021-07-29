@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-const we_id = "xf"
-const we_url = "https://dev-op-api.dvweg.com"
-const we_secret = "5E0A6D572DE042581B4618D3B836581C"
+const we_id = "16e5shi0"
+const we_url = "https://op-api.aeweg.com"
+const we_secret = "4XMdW16LWRMkKn_BnSbSC-q9BMsLSCQISFN06ANsK18="
 
 func WELogin(info model.PlayerInfo) (bool, string) {
 	data := url.Values{

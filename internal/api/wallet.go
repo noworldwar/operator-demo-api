@@ -31,7 +31,7 @@ func GetWallet(c *gin.Context) {
 
 	data = append(data, GetBalanceByBank("Main", info))
 	data = append(data, GetBalanceByBank("WE_T", info))
-	data = append(data, GetBalanceByBank("TPG", info))
+	// data = append(data, GetBalanceByBank("TPG", info))
 
 	c.JSON(200, gin.H{"data": data})
 }
