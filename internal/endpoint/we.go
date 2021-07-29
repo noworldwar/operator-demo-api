@@ -14,7 +14,7 @@ import (
 )
 
 const we_id = "xf"
-const we_url = "http://dev-op-api.dvweg.com"
+const we_url = "https://dev-op-api.dvweg.com"
 const we_secret = "5E0A6D572DE042581B4618D3B836581C"
 
 func WELogin(info model.PlayerInfo) (bool, string) {
