@@ -1,18 +1,16 @@
 package model
 
-import "time"
-
 type Transfer struct {
-	TransferID  string    `json:"transferID" xorm:"varchar(30) pk"`
-	PlayerID    string    `json:"playerID"   xorm:"varchar(30)"`
-	FromBank    string    `json:"fromBank"   xorm:"varchar(30)"`
-	FromBalance float64   `json:"fromBalance"`
-	ToBank      string    `json:"toBank"     xorm:"varchar(30)"`
-	ToBalance   float64   `json:"toBalance"`
-	Amount      int64     `json:"amount"`
-	Success     bool      `json:"success"`
-	Created     time.Time `json:"created"    xorm:"created"`
-	Updated     time.Time `json:"updated"    xorm:"updated"`
+	TransferID  string  `json:"transferID" xorm:"varchar(30) pk"`
+	PlayerID    string  `json:"playerID"   xorm:"varchar(30)"`
+	FromBank    string  `json:"fromBank"   xorm:"varchar(30)"`
+	FromBalance float64 `json:"fromBalance"`
+	ToBank      string  `json:"toBank"     xorm:"varchar(30)"`
+	ToBalance   float64 `json:"toBalance"`
+	Amount      int64   `json:"amount"`
+	Success     bool    `json:"success"`
+	Created     int64   `xorm:"bigint"`
+	Updated     int64   `xorm:"bigint"`
 }
 
 func GetTransferBy(playerID string) (m []Transfer, err error) {
