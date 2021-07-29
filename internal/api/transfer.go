@@ -78,7 +78,7 @@ func CreateTransfer(c *gin.Context) {
 	}
 
 	// 取得錢包餘額
-	checkWallet := GetBalanceByBank(fromBank, info)
+	checkWallet := GetBalanceByBank(fromBank, info, token)
 	if !checkWallet.Success {
 		lib.ErrorResponse(c, 500, "Failed to get balance", nil)
 		return
