@@ -9,8 +9,8 @@ type Transfer struct {
 	ToBalance   float64 `json:"toBalance"`
 	Amount      int64   `json:"amount"`
 	Success     bool    `json:"success"`
-	Created     int64   `xorm:"bigint"`
-	Updated     int64   `xorm:"bigint"`
+	Created     int64   `json:"created" xorm:"bigint"`
+	Updated     int64   `json:"updated" xorm:"bigint"`
 }
 
 func GetTransferBy(playerID string) (m []Transfer, err error) {

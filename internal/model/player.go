@@ -9,8 +9,8 @@ type Player struct {
 	Balance    int64  `json:"balance"`
 	Test       int    `xorm:"int notnull"`
 	Disabled   bool   `json:"disabled"`
-	Created    int64  `xorm:"bigint"`
-	Updated    int64  `xorm:"bigint"`
+	Created    int64  `json:"created" xorm:"bigint"`
+	Updated    int64  `json:"updated" xorm:"bigint"`
 }
 
 func GetPlayer(playerID string) (m Player, err error) {
