@@ -108,6 +108,8 @@ func CreateTransfer(c *gin.Context) {
 		ToBalance:   toWallet.Balance,
 		Amount:      iamount,
 		Success:     toWallet.Success,
+		Created:     time.Now().Unix(),
+		Updated:     time.Now().Unix(),
 	}
 	err = model.AddTransfer(tran)
 	if err != nil {

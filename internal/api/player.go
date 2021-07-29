@@ -4,6 +4,7 @@ import (
 	"bc-opp-api/internal/lib"
 	"bc-opp-api/internal/model"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -79,7 +80,16 @@ func CreatePlayer(c *gin.Context) {
 	}
 
 	// 新增玩家到DB
-	player := model.Player{PlayerID: username, Password: passwordHash, Nickname: nickname, Balance: 500000, Disabled: false}
+	player := model.Player{
+		PlayerID: username,
+		Password: passwordHash,
+		Nickname: nickname,
+		Balance:  500000,
+		Disabled: false,
+		Created:  time.Now().Unix(),
+		Updated:  time.Now().Unix(),
+	}
+
 	err = model.AddPlayer(player)
 	if err != nil {
 		if strings.Contains(err.Error(), "Duplicate entry") {
