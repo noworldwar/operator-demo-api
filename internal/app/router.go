@@ -31,7 +31,7 @@ func InitRouter() {
 	r.GET("/info", api.GetSystemInfo)
 
 	r.NoRoute(func(c *gin.Context) { c.AbortWithStatus(400) })
-	APIServer = http.Server{Handler: r, Addr: ":7901"}
+	APIServer = http.Server{Handler: r, Addr: ":7904"}
 }
 
 func RunServer() {
