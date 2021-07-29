@@ -15,7 +15,7 @@ import (
 
 const we_id = "xf"
 const we_url = "https://dev-op-api.dvweg.com"
-const we_s_url = "http://18.218.89.217"
+const we_s_url = "http://18.218.89.217:7901"
 const we_secret = "5E0A6D572DE042581B4618D3B836581C"
 
 func WELogin(info model.PlayerInfo) (bool, string) {
@@ -242,11 +242,8 @@ func CallSWEAPI(funcName string, data url.Values) (int, []byte) {
 		url += "/api/balance"
 	}
 
-	singB64 := base64.StdEncoding.EncodeToString([]byte(we_secret + we_id + data.Get("playerID")))
-
 	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("signature", singB64)
 
 	clt := http.Client{}
 	rsp, err := clt.Do(req)
@@ -264,7 +261,6 @@ func CallSWEAPI(funcName string, data url.Values) (int, []byte) {
 	msg := "------------------------------------------------------------\r\n"
 	msg += fmt.Sprintf("[%s] \r\n\r\n", time.Now().Format("2006/01/02 15:04:05"))
 	msg += fmt.Sprintf("[Request] \r\nPOST %s\r\n\r\n", url)
-	msg += fmt.Sprintf("[Signature] \r\n%s\r\n\r\n", singB64)
 	msg += fmt.Sprintf("[Body] \r\n%v\r\n\r\n", data)
 	msg += fmt.Sprintf("[Status] \r\n%v\r\n\r\n", status)
 	msg += fmt.Sprintf("[Response Data] \r\n%s\r\n\r\n", strings.TrimRight(errmsg, "\n"))
