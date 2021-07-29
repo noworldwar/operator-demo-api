@@ -13,9 +13,9 @@ import (
 	"time"
 )
 
-const we_id = "wgbh9a9g"
-const we_url = "https://dev-op-api.weapi247.com"
-const we_secret = "i-k9Y1RnHj6K8tn90nCWcTfM0grISzG6zqEqybkKEm8="
+const we_id = "jh21mvvg"
+const we_url = "https://dev-op-api.dvweg.com"
+const we_secret = "C8QUN7yVNNhoG67DILn96iUJJAy7Rt2A00rUne75h34="
 
 func WELogin(info model.PlayerInfo) (bool, string) {
 	data := url.Values{
