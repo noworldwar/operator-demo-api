@@ -8,11 +8,12 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 const tpg_game_url = "https://stagingweblobby.triple-pg.com/we/direct2Game/202"
 const we_game_url = "https://dev-web-game-fe.dvweg.com/"
-const we_s_id = "jh21mvvg"
+const we_s_id = "14e5sfbg"
 
 func GetGameLink(c *gin.Context) {
 	token := c.Query("token")
@@ -36,12 +37,13 @@ func GetGameLink(c *gin.Context) {
 	// 組合遊戲url
 	switch strings.ToLower(gp) {
 	case "tpg":
-		success, tpgToken := endpoint.TPGToken(info)
-		if !success {
-			lib.ErrorResponse(c, 500, "Failed to TPG login", nil)
-			return
-		}
-		link = fmt.Sprintf("%s?gameid=%s&lang=zh-tw&playmode=real&token=%s", tpg_game_url, gameID, tpgToken)
+		// success, tpgToken := endpoint.TPGToken(info)
+		// if !success {
+		// 	lib.ErrorResponse(c, 500, "Failed to TPG login", nil)
+		// 	return
+		// }
+		// link = fmt.Sprintf("%s?gameid=%s&lang=zh-tw&playmode=real&token=%s", tpg_game_url, gameID, tpgToken)
+		link = fmt.Sprintf("%s?gameid=%s&lang=zh-tw&playmode=demo", viper.GetString("tpg_game_url"), gameID)
 	case "we_t":
 		success, link = endpoint.WELogin(info)
 		if !success {

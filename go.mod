@@ -10,6 +10,7 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/pkg/errors v0.9.1
 	github.com/rs/xid v1.2.1
+	github.com/spf13/viper v1.8.1
 	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
 	xorm.io/core v0.7.3
 	xorm.io/xorm v1.0.5
