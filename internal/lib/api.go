@@ -2,12 +2,14 @@ package lib
 
 import (
 	"bytes"
+	"crypto/md5"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-resty/resty/v2"
 )
 
 func HasPostFormEmpty(c *gin.Context, keys ...string) string {
@@ -83,4 +85,18 @@ func (w bodyLogWriter) Write(b []byte) (int, error) {
 func (w bodyLogWriter) WriteString(s string) (int, error) {
 	w.body.WriteString(s)
 	return w.ResponseWriter.WriteString(s)
+}
+
+func PostWithSignature(path string, formData map[string]string, signStr string) []byte {
+	httpClient := resty.New()
+	has := md5.Sum([]byte(signStr))
+	signature := fmt.Sprintf("%x", has)
+	rsp, err := httpClient.R().EnableTrace().
+		SetHeader("signature", signature).
+		SetFormData(formData).
+		Post(path)
+	if err != nil {
+		return nil
+	}
+	return rsp.Body()
 }

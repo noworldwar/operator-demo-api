@@ -9,22 +9,25 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
 
-const we_id = "16e5shi0"
-const we_url = "https://op-api.aeweg.com"
-const we_secret = "4XMdW16LWRMkKn_BnSbSC-q9BMsLSCQISFN06ANsK18="
+const we_id = "HW36b310"
+const we_url = "https://uat-op-api.bpweg.com"
+const we_secret = "MMtmG7tjrPcbkmUSRdrIW5xoTIhYHDHlTx3e7PpKmag="
 
 func WELogin(info model.PlayerInfo) (bool, string) {
+	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
 	data := url.Values{
-		"operatorID": {we_id},
-		"appSecret":  {we_secret},
-		"playerID":   {info.PlayerID},
+		"operatorID":  {we_id},
+		"appSecret":   {we_secret},
+		"playerID":    {info.PlayerID},
+		"requestTime": {requestTime},
 	}
-
-	status, result := CallWEAPI("login", data)
+	singB64 := Base64encode(we_secret, we_id, info.PlayerID, requestTime)
+	status, result := CallWEAPI("login", singB64, data)
 
 	if status != 200 {
 		return false, ""
@@ -47,13 +50,15 @@ func WELogin(info model.PlayerInfo) (bool, string) {
 }
 
 func WEGetBalance(info model.PlayerInfo) (bool, float64) {
+	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
 	data := url.Values{
-		"operatorID": {we_id},
-		"appSecret":  {we_secret},
-		"playerID":   {info.PlayerID},
+		"operatorID":  {we_id},
+		"appSecret":   {we_secret},
+		"playerID":    {info.PlayerID},
+		"requestTime": {requestTime},
 	}
-
-	status, result := CallWEAPI("balance", data)
+	singB64 := Base64encode(we_secret, we_id, info.PlayerID, requestTime)
+	status, result := CallWEAPI("balance", singB64, data)
 
 	if status == 404 {
 		return WECreatePlayer(info), 0
@@ -80,27 +85,32 @@ func WEGetBalance(info model.PlayerInfo) (bool, float64) {
 }
 
 func WECreatePlayer(info model.PlayerInfo) bool {
+	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
 	data := url.Values{
-		"operatorID": {we_id},
-		"appSecret":  {we_secret},
-		"playerID":   {info.PlayerID},
-		"nickname":   {info.Nickname},
+		"operatorID":  {we_id},
+		"appSecret":   {we_secret},
+		"playerID":    {info.PlayerID},
+		"nickname":    {info.Nickname},
+		"requestTime": {requestTime},
 	}
-
-	status, _ := CallWEAPI("create", data)
+	singB64 := Base64encode(we_secret, info.Nickname, we_id, info.PlayerID, requestTime)
+	status, _ := CallWEAPI("create", singB64, data)
 	return status == 200
 }
 
 func WEDeposit(playerID, uid string, amount int64) (bool, float64) {
+	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
 	data := url.Values{
-		"operatorID": {we_id},
-		"appSecret":  {we_secret},
-		"playerID":   {playerID},
-		"uid":        {uid},
-		"amount":     {fmt.Sprintf("%d", amount)},
+		"operatorID":  {we_id},
+		"appSecret":   {we_secret},
+		"playerID":    {playerID},
+		"uid":         {uid},
+		"amount":      {fmt.Sprintf("%d", amount)},
+		"requestTime": {requestTime},
 	}
 
-	status, result := CallWEAPI("deposit", data)
+	singB64 := Base64encode(fmt.Sprintf("%d", amount), we_secret, we_id, playerID, requestTime, uid)
+	status, result := CallWEAPI("deposit", singB64, data)
 	if status != 200 {
 		return false, 0
 	}
@@ -122,15 +132,17 @@ func WEDeposit(playerID, uid string, amount int64) (bool, float64) {
 }
 
 func WEWithdraw(playerID, uid string, amount int64) (bool, float64) {
+	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
 	data := url.Values{
-		"operatorID": {we_id},
-		"appSecret":  {we_secret},
-		"playerID":   {playerID},
-		"uid":        {uid},
-		"amount":     {fmt.Sprintf("%d", amount)},
+		"operatorID":  {we_id},
+		"appSecret":   {we_secret},
+		"playerID":    {playerID},
+		"uid":         {uid},
+		"amount":      {fmt.Sprintf("%d", amount)},
+		"requestTime": {requestTime},
 	}
-
-	status, result := CallWEAPI("withdraw", data)
+	singB64 := Base64encode(fmt.Sprintf("%d", amount), we_secret, we_id, playerID, requestTime, uid)
+	status, result := CallWEAPI("withdraw", singB64, data)
 	if status != 200 {
 		return false, 0
 	}
@@ -151,7 +163,7 @@ func WEWithdraw(playerID, uid string, amount int64) (bool, float64) {
 	return true, balance
 }
 
-func CallWEAPI(funcName string, data url.Values) (int, []byte) {
+func CallWEAPI(funcName, singB64 string, data url.Values) (int, []byte) {
 	url := we_url
 	status := 999
 	errmsg := ""
@@ -170,7 +182,7 @@ func CallWEAPI(funcName string, data url.Values) (int, []byte) {
 		url += "/player/withdraw"
 	}
 
-	singB64 := base64.StdEncoding.EncodeToString([]byte(we_secret + we_id + data.Get("playerID")))
+	// singB64 := base64.StdEncoding.EncodeToString([]byte(we_secret + we_id + data.Get("playerID")))
 
 	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -201,4 +213,12 @@ func CallWEAPI(funcName string, data url.Values) (int, []byte) {
 	go lib.WriteLog("we_", msg)
 
 	return status, result
+}
+
+func Base64encode(inputs ...string) string {
+	str := ""
+	for _, v := range inputs {
+		str += v
+	}
+	return base64.StdEncoding.EncodeToString([]byte(str))
 }
