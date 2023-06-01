@@ -1,9 +1,9 @@
 package api
 
 import (
-	"bc-opp-api/internal/endpoint"
 	"bc-opp-api/internal/lib"
 	"bc-opp-api/internal/model"
+	"bc-opp-api/internal/request"
 	"fmt"
 	"strings"
 
@@ -49,11 +49,7 @@ func GetBalanceByBank(bank string, info model.PlayerInfo) model.Wallet {
 			wallet.Success = true
 		}
 	case "we":
-		success, bal := endpoint.WEGetBalance(info)
-		wallet.Balance = bal / 100
-		wallet.Success = success
-	case "tpg":
-		success, bal := endpoint.TPGGetBalance(info)
+		success, bal := request.WEGetBalance(info)
 		wallet.Balance = bal / 100
 		wallet.Success = success
 	default:

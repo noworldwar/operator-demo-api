@@ -1,9 +1,9 @@
 package api
 
 import (
-	"bc-opp-api/internal/endpoint"
 	"bc-opp-api/internal/lib"
 	"bc-opp-api/internal/model"
+	"bc-opp-api/internal/request"
 	"fmt"
 	"strconv"
 	"strings"
@@ -138,11 +138,7 @@ func Withdraw(bank, playerID, uid string, amount int64) model.Wallet {
 			wallet.Success = true
 		}
 	case "we":
-		success, bal := endpoint.WEWithdraw(playerID, uid, amount*100)
-		wallet.Balance = bal / 100
-		wallet.Success = success
-	case "tpg":
-		success, bal := endpoint.TPGWithdraw(playerID, uid, amount*100)
+		success, bal := request.WEWithdraw(playerID, uid, amount*100)
 		wallet.Balance = bal / 100
 		wallet.Success = success
 	default:
@@ -166,11 +162,7 @@ func Deposit(bank, playerID, uid string, amount int64) model.Wallet {
 			wallet.Success = true
 		}
 	case "we":
-		success, bal := endpoint.WEDeposit(playerID, uid, amount*100)
-		wallet.Balance = bal / 100
-		wallet.Success = success
-	case "tpg":
-		success, bal := endpoint.TPGDeposit(playerID, uid, amount*100)
+		success, bal := request.WEDeposit(playerID, uid, amount*100)
 		wallet.Balance = bal / 100
 		wallet.Success = success
 	default:

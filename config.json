@@ -1,0 +1,16 @@
+{
+    "api":{
+        "port":":7904"
+    },
+    "gameprovider":{
+        "we":{
+            "game_url":"https://uat-web-game-fe.bpweg.com/",
+            "s_id":"t9001admin5nrp0",
+            "t_id":"HW36b310",
+            "api":"https://uat-op-api.bpweg.com",
+            "s_appsecret":"_uE7WOOJy0WEumUuNdGnpGepYp-OvvVpeOTNfYLyBek=",
+            "appsecret":"MMtmG7tjrPcbkmUSRdrIW5xoTIhYHDHlTx3e7PpKmag="
+        }
+    }
+    
+}

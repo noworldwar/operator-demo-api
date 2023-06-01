@@ -2,12 +2,14 @@ package app
 
 import (
 	"bc-opp-api/internal/api"
+	"bc-opp-api/internal/endpoint"
 	"bc-opp-api/internal/lib"
 	"log"
 	"net/http"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 var APIServer http.Server
@@ -30,8 +32,16 @@ func InitRouter() {
 
 	r.GET("/info", api.GetSystemInfo)
 
+	group := r.Group("/we/api")
+
+	group.POST("/validate", endpoint.Validate)
+	group.POST("/balance", endpoint.GetBalance)
+	group.POST("/debit", endpoint.Debit)
+	group.POST("/credit", endpoint.Credit)
+	group.POST("/rollback", endpoint.Rollback)
+
 	r.NoRoute(func(c *gin.Context) { c.AbortWithStatus(400) })
-	APIServer = http.Server{Handler: r, Addr: ":7904"}
+	APIServer = http.Server{Handler: r, Addr: viper.GetString("api.port")}
 }
 
 func RunServer() {

@@ -3,223 +3,358 @@ package endpoint
 import (
 	"bc-opp-api/internal/lib"
 	"bc-opp-api/internal/model"
-	"crypto/md5"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/gin-gonic/gin"
+	"github.com/rs/xid"
 )
 
-const we_id = "HW36b310"
-const we_url = "https://uat-op-api.bpweg.com"
-const we_secret = "MMtmG7tjrPcbkmUSRdrIW5xoTIhYHDHlTx3e7PpKmag="
-
-func WELogin(info model.PlayerInfo) (bool, string) {
-	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
-	data := url.Values{
-		"operatorID":  {we_id},
-		"appSecret":   {we_secret},
-		"playerID":    {info.PlayerID},
-		"requestTime": {requestTime},
-	}
-	singMD5 := MD5encode(we_secret, we_id, info.PlayerID, requestTime)
-	status, result := CallWEAPI("login", singMD5, data)
-
-	if status != 200 {
-		return false, ""
-	}
-
-	var m map[string]interface{}
-	err := json.Unmarshal(result, &m)
-	if err != nil {
-		fmt.Println("WE response format error")
-		return false, ""
-	}
-
-	gameURL, ok := m["url"].(string)
-	if !ok {
-		fmt.Println("WE response balance format error")
-		return false, ""
-	}
-
-	return true, gameURL
+type creditDatail struct {
+	OperatorID string `json:"operatorID"`
+	AppSecret  string `json:"appSecret"`
+	PlayerID   string `json:"playerID"`
+	GameID     string `json:"gameID"`
+	BetID      string `json:"betID"`
+	Amount     string `json:"amount"`
+	GameStatus string `json:"gameStatus"`
+	GameResult string `json:"gameResult"`
+	Currency   string `json:"currency"`
+	Type       string `json:"type"`
+	Time       string `json:"time"`
 }
 
-func WEGetBalance(info model.PlayerInfo) (bool, float64) {
-	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
-	data := url.Values{
-		"operatorID":  {we_id},
-		"appSecret":   {we_secret},
-		"playerID":    {info.PlayerID},
-		"requestTime": {requestTime},
-	}
-	singMD5 := MD5encode(we_secret, we_id, info.PlayerID, requestTime)
-	status, result := CallWEAPI("balance", singMD5, data)
+func Validate(c *gin.Context) {
+	token := c.PostForm("token")
+	appSecret := c.PostForm("appSecret")
+	operatorID := c.PostForm("operatorID")
 
-	if status == 404 {
-		return WECreatePlayer(info), 0
+	// Step 1: Check the required parameters
+	if k := lib.HasPostFormEmpty(c, "token", "appSecret", "operatorID"); k != "" {
+		lib.ErrorResponse(c, 400, "Missing parameter:"+k, nil)
+		return
 	}
 
-	if status != 200 {
-		return false, 0
+	var player_data model.Player
+	var err error
+
+	// Step 2: Check AppSecret
+	if lib.CheckWEAppSecret(operatorID, appSecret) {
+		lib.ErrorResponse(c, 401, "Incorrect appSecret", nil)
+		return
 	}
 
-	var m map[string]interface{}
-	err := json.Unmarshal(result, &m)
-	if err != nil {
-		fmt.Println("WE response format error")
-		return false, 0
+	// Step 3: Check Token
+	player_info := model.GetPlayerInfo(token)
+	player_data, err = model.GetPlayer(player_info.PlayerID)
+	if err != nil || player_data.PlayerID == "" {
+		lib.ErrorResponse(c, 404, "Token has expired", err)
+		return
 	}
 
-	balance, ok := m["balance"].(float64)
-	if !ok {
-		fmt.Println("WE response balance format error")
-		return false, 0
-	}
-
-	return true, balance
+	c.JSON(200, gin.H{"playerID": player_data.PlayerID, "nickname": player_data.Nickname, "currency": player_data.Currency, "test": lib.IntToBool(player_data.Test), "time": player_data.Created})
 }
 
-func WECreatePlayer(info model.PlayerInfo) bool {
-	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
-	data := url.Values{
-		"operatorID":  {we_id},
-		"appSecret":   {we_secret},
-		"playerID":    {info.PlayerID},
-		"nickname":    {info.Nickname},
-		"requestTime": {requestTime},
+func GetBalance(c *gin.Context) {
+	token := c.PostForm("token")
+	appSecret := c.PostForm("appSecret")
+	operatorID := c.PostForm("operatorID")
+	playerID := c.PostForm("playerID")
+
+	// Step 1: Check the required parameters
+	if k := lib.HasPostFormEmpty(c, "token", "appSecret", "operatorID", "playerID"); k != "" {
+		lib.ErrorResponse(c, 400, "Missing parameter:"+k, nil)
+		return
 	}
-	singMD5 := MD5encode(we_secret, info.Nickname, we_id, info.PlayerID, requestTime)
-	status, _ := CallWEAPI("create", singMD5, data)
-	return status == 200
+
+	// Step 2: Check AppSecret
+	if lib.CheckWEAppSecret(operatorID, appSecret) {
+		lib.ErrorResponse(c, 401, "Incorrect appSecret", nil)
+		return
+	}
+
+	// Step 3: Check Token
+	player_info := model.GetPlayerInfo(token)
+	player_data, err := model.GetPlayer(player_info.PlayerID)
+	if err != nil || player_data.PlayerID == "" {
+		lib.ErrorResponse(c, 404, "Token has expired", err)
+		return
+	} else if player_data.PlayerID != playerID {
+		lib.ErrorResponse(c, 400, "Incorrect playerID", nil)
+		return
+	}
+
+	c.JSON(200, gin.H{"balance": player_data.Balance, "currency": player_data.Currency, "time": player_data.Created})
 }
 
-func WEDeposit(playerID, uid string, amount int64) (bool, float64) {
-	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
-	data := url.Values{
-		"operatorID":  {we_id},
-		"appSecret":   {we_secret},
-		"playerID":    {playerID},
-		"uid":         {uid},
-		"amount":      {fmt.Sprintf("%d", amount)},
-		"requestTime": {requestTime},
+func Debit(c *gin.Context) {
+	token := c.PostForm("token")
+	operatorID := c.PostForm("operatorID")
+	appSecret := c.PostForm("appSecret")
+	playerID := c.PostForm("playerID")
+	gameID := c.PostForm("gameID")
+	betID := c.PostForm("betID")
+	amount := c.PostForm("amount")
+	currency := c.PostForm("currency")
+	we_tran_type := c.PostForm("type")
+	we_time := c.PostForm("time")
+
+	// Step 1: Check the required parameters
+	if k := lib.HasPostFormEmpty(c, "token", "amount", "appSecret", "betID", "operatorID", "playerID", "gameID", "time", "type"); k != "" {
+		lib.ErrorResponse(c, 400, "Missing parameter:"+k, nil)
+		return
 	}
 
-	singMD5 := MD5encode(fmt.Sprintf("%d", amount), we_secret, we_id, playerID, requestTime, uid)
-	status, result := CallWEAPI("deposit", singMD5, data)
-	if status != 200 {
-		return false, 0
+	// Step 2: Check AppSecret
+	if lib.CheckWEAppSecret(operatorID, appSecret) {
+		lib.ErrorResponse(c, 401, "Incorrect appSecret", nil)
+		return
 	}
 
-	var m map[string]interface{}
-	err := json.Unmarshal(result, &m)
+	// Step 3: Check Token
+	player_info := model.GetPlayerInfo(token)
+	player_data, err := model.GetPlayer(player_info.PlayerID)
+	if err != nil || player_data.PlayerID == "" {
+		lib.ErrorResponse(c, 404, "Token has expired", err)
+		return
+	} else if player_data.PlayerID != playerID {
+		lib.ErrorResponse(c, 400, "Incorrect playerID", nil)
+		return
+	}
+
+	// Step 4: Check Amount
+	amount_int, err := strconv.ParseInt(amount, 10, 64)
 	if err != nil {
-		fmt.Println("WE response format error")
-		return false, 0
+		lib.ErrorResponse(c, 400, "Incorrect amount format:"+amount, err)
+		return
+	} else if amount_int <= 0 {
+		lib.ErrorResponse(c, 400, "Incorrect amount format:"+amount, nil)
+		return
+	} else if amount_int > player_data.Balance {
+		lib.ErrorResponse(c, 402, "Insufficient balance", nil)
+		return
 	}
 
-	balance, ok := m["balance"].(float64)
-	if !ok {
-		fmt.Println("WE response balance format error")
-		return false, 0
+	// Step 5: Check Duplicate transaction
+	isExist, err := model.CheckIfBetTransferExist(betID, "Debit")
+	if isExist {
+		lib.ErrorResponse(c, 409, "Duplicate transaction: ", err)
+		return
 	}
 
-	return true, balance
+	// Step 6: Add Transfer
+	refID := time.Now().Format("20060102") + xid.New().String()
+	transfer := model.BetTransfer{
+		TransferID: refID,
+		PlayerID:   playerID,
+		Type:       "Debit",
+		BetID:      betID,
+		GameID:     gameID,
+		WeType:     we_tran_type,
+		WeTime:     we_time,
+		Amount:     amount_int,
+		Success:    true,
+		Created:    time.Now().Unix(),
+		Updated:    time.Now().Unix(),
+	}
+	AddErr := model.AddBetTransfer(transfer)
+	if AddErr != nil {
+		lib.ErrorResponse(c, 500, "Internal Server Error: ", AddErr)
+		return
+	}
+
+	// Step 7: Update Balance
+	balance, _ := model.UpdateBalance(playerID, -amount_int)
+
+	c.JSON(200, gin.H{"balance": balance, "currency": currency, "time": time.Now().Unix(), "refID": refID})
 }
 
-func WEWithdraw(playerID, uid string, amount int64) (bool, float64) {
-	requestTime := strconv.FormatInt(time.Now().Unix(), 10)
-	data := url.Values{
-		"operatorID":  {we_id},
-		"appSecret":   {we_secret},
-		"playerID":    {playerID},
-		"uid":         {uid},
-		"amount":      {fmt.Sprintf("%d", amount)},
-		"requestTime": {requestTime},
-	}
-	singMD5 := MD5encode(fmt.Sprintf("%d", amount), we_secret, we_id, playerID, requestTime, uid)
-	status, result := CallWEAPI("withdraw", singMD5, data)
-	if status != 200 {
-		return false, 0
-	}
+func Credit(c *gin.Context) {
+	token := c.PostForm("token")
+	refID := ""
+	// Step 1: Unmarshal The JSON Data
+	data := c.PostForm("data")
+	balance := int64(0)
+	creditDatail := []creditDatail{}
 
-	var m map[string]interface{}
-	err := json.Unmarshal(result, &m)
+	err := json.Unmarshal([]byte(data), &creditDatail)
 	if err != nil {
-		fmt.Println("WE response format error")
-		return false, 0
+		lib.ErrorResponse(c, 400, "JSON format failed: "+err.Error(), nil)
 	}
 
-	balance, ok := m["balance"].(float64)
-	if !ok {
-		fmt.Println("WE response balance format error")
-		return false, 0
-	}
+	// Step 2: Read Credit Detail Data
+	for _, v := range creditDatail {
 
-	return true, balance
-}
-
-func CallWEAPI(funcName, singMD5 string, data url.Values) (int, []byte) {
-	url := we_url
-	status := 999
-	errmsg := ""
-	var result []byte
-
-	switch funcName {
-	case "login":
-		url += "/player/login"
-	case "create":
-		url += "/player/create"
-	case "balance":
-		url += "/player/balance"
-	case "deposit":
-		url += "/player/deposit"
-	case "withdraw":
-		url += "/player/withdraw"
-	}
-
-	// singMD5 := base64.StdEncoding.EncodeToString([]byte(we_secret + we_id + data.Get("playerID")))
-
-	req, _ := http.NewRequest("POST", url, strings.NewReader(data.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("signature", singMD5)
-
-	clt := http.Client{}
-	rsp, err := clt.Do(req)
-	if err != nil {
-		errmsg = err.Error()
-	} else {
-		status = rsp.StatusCode
-		rspBody, _ := ioutil.ReadAll(rsp.Body)
-		errmsg = string(rspBody)
-		if rsp.StatusCode == 200 {
-			result = rspBody
+		// Step 2.1: Check AppSecret
+		if lib.CheckWEAppSecret(v.OperatorID, v.AppSecret) {
+			lib.ErrorResponse(c, 401, "Incorrect appSecret: operatorID:"+v.OperatorID, nil)
+			return
 		}
+
+		// Step 2.2: Check Token
+		if token != "" {
+			player_info := model.GetPlayerInfo(token)
+			player_data, err := model.GetPlayer(player_info.PlayerID)
+			if err != nil || player_data.PlayerID == "" {
+				lib.ErrorResponse(c, 404, "Token has expired", err)
+				return
+			} else if player_data.PlayerID != v.PlayerID {
+				lib.ErrorResponse(c, 400, "Incorrect playerID: playerID:"+v.PlayerID, nil)
+				return
+			}
+		} else {
+			player_data, err := model.GetPlayer(v.PlayerID)
+			if err != nil || player_data.PlayerID == "" {
+				lib.ErrorResponse(c, 400, "Incorrect playerID: playerID:"+v.PlayerID, nil)
+				return
+			}
+		}
+
+		// Step 2.3: Check Amount
+		amount_int, err := strconv.ParseInt(v.Amount, 10, 64)
+		if err != nil {
+			lib.ErrorResponse(c, 400, "Incorrect amount format: "+v.Amount, err)
+			return
+		}
+
+		// Step 2.4: Check Debit Record
+		debitRecord, err := model.GetBetTransferByBetID(v.BetID, "Debit")
+		if err != nil || debitRecord.PlayerID == "" {
+			lib.ErrorResponse(c, 410, "Failed to read bet transaction: ", err)
+			return
+		}
+
+		// Step 2.5: Check GameID
+		if strings.Trim(debitRecord.GameID, " ") != strings.Trim(v.GameID, " ") {
+			lib.ErrorResponse(c, 400, "Incorrect gameID: ", err)
+			return
+		}
+
+		// Step 2.6: Check Transaction Already Paid
+		isExist, err := model.CheckIfBetTransferExist(v.BetID, "Credit")
+		if isExist {
+			lib.ErrorResponse(c, 409, "Duplicate transaction: betID already paid ", err)
+			return
+		}
+
+		// Step 2.7: Check Duplicate Transaction
+		isRollbacked, err := model.CheckIfBetTransferExist(v.BetID, "Rollback")
+		if isRollbacked {
+			lib.ErrorResponse(c, 409, "Duplicate transaction: betID already rollbacked ", err)
+			return
+		}
+
+		// Step 9: Add Transfer
+		refID = time.Now().Format("20060102") + xid.New().String()
+		transfer := model.BetTransfer{TransferID: refID,
+			PlayerID: v.PlayerID,
+			Type:     "Credit",
+			BetID:    v.BetID,
+			GameID:   v.GameID,
+			WeType:   v.Type,
+			WeTime:   v.Time,
+			Amount:   amount_int,
+			Success:  true,
+			Created:  time.Now().Unix(),
+			Updated:  time.Now().Unix(),
+		}
+		err = model.AddBetTransfer(transfer)
+		if err != nil {
+			lib.ErrorResponse(c, 500, "Internal Server Error: ", err)
+			return
+		}
+
+		// Step 10: Update Balance
+		balance, _ = model.UpdateBalance(v.PlayerID, amount_int)
+
 	}
 
-	msg := "------------------------------------------------------------\r\n"
-	msg += fmt.Sprintf("[%s] \r\n\r\n", time.Now().Format("2006/01/02 15:04:05"))
-	msg += fmt.Sprintf("[Request] \r\nPOST %s\r\n\r\n", url)
-	msg += fmt.Sprintf("[Signature] \r\n%s\r\n\r\n", singMD5)
-	msg += fmt.Sprintf("[Body] \r\n%v\r\n\r\n", data)
-	msg += fmt.Sprintf("[Status] \r\n%v\r\n\r\n", status)
-	msg += fmt.Sprintf("[Response Data] \r\n%s\r\n\r\n", strings.TrimRight(errmsg, "\n"))
-	msg += "------------------------------------------------------------\r\n"
-
-	go lib.WriteLog("we_", msg)
-
-	return status, result
+	c.JSON(200, gin.H{"balance": balance, "currency": creditDatail[0].Currency, "time": time.Now().Unix(), "refID": refID})
 }
 
-func MD5encode(inputs ...string) string {
-	str := ""
-	for _, v := range inputs {
-		str += v
+func Rollback(c *gin.Context) {
+	operatorID := c.PostForm("operatorID")
+	appSecret := c.PostForm("appSecret")
+	playerID := c.PostForm("playerID")
+	gameID := c.PostForm("gameID")
+	betID := c.PostForm("betID")
+	amount := c.PostForm("amount")
+	currency := c.PostForm("currency")
+	we_tran_type := c.PostForm("type")
+	we_time := c.PostForm("time")
+
+	// Step 1: Check the required parameters
+	if k := lib.HasPostFormEmpty(c, "amount", "appSecret", "betID", "operatorID", "playerID", "gameID", "time", "type"); k != "" {
+		lib.ErrorResponse(c, 400, "Missing parameter:"+k, nil)
+		return
 	}
-	has := md5.Sum([]byte(str))
-	return fmt.Sprintf("%x", has)
+
+	// Step 2: Check AppSecret
+	if lib.CheckWEAppSecret(operatorID, appSecret) {
+		lib.ErrorResponse(c, 401, "Incorrect appSecret", nil)
+		return
+	}
+
+	// Step 3: Check Amount
+	amount_int, err := strconv.ParseInt(amount, 10, 64)
+	if err != nil {
+		lib.ErrorResponse(c, 400, "Incorrect amount format:"+amount, err)
+		return
+	}
+
+	// Step 4: Check Debit Record
+	debitRecord, err := model.GetBetTransferByBetID(betID, "Debit")
+	if err != nil || debitRecord.PlayerID == "" {
+		lib.ErrorResponse(c, 410, "Failed to read bet transaction: ", err)
+		return
+	}
+
+	// Step 5: Check GameID
+	if strings.Trim(debitRecord.GameID, " ") != strings.Trim(gameID, " ") {
+		lib.ErrorResponse(c, 400, "Incorrect gameID: ", err)
+		return
+	}
+
+	// Step 6: Check Duplicate transaction
+	isExist, err := model.CheckIfBetTransferExist(betID, "Rollback")
+	if isExist {
+		lib.ErrorResponse(c, 409, "Duplicate transaction: betID already rollbacked", err)
+		return
+	}
+
+	// Step 7: Get Credit Amount
+	creditRecord, _ := model.GetBetTransferByBetID(betID, "Credit")
+
+	// Step 7: Check Rollback Amount
+	if amount_int > 0 && amount_int != (debitRecord.Amount-creditRecord.Amount) {
+		lib.ErrorResponse(c, 409, "Incorrect Rollback Amount: ", err)
+		return
+	}
+
+	// Step 8: Add Transfer
+	refID := time.Now().Format("20060102") + xid.New().String()
+	transfer := model.BetTransfer{TransferID: refID,
+		PlayerID: playerID,
+		Type:     "Rollback",
+		BetID:    betID,
+		GameID:   gameID,
+		WeType:   we_tran_type,
+		WeTime:   we_time,
+		Amount:   amount_int,
+		Success:  true,
+		Created:  time.Now().Unix(),
+		Updated:  time.Now().Unix(),
+	}
+	err = model.AddBetTransfer(transfer)
+	if err != nil {
+		lib.ErrorResponse(c, 500, "Internal Server Error: ", err)
+		return
+	}
+
+	// Step 9: Update Balance
+	balance, _ := model.UpdateBalance(playerID, amount_int)
+
+	c.JSON(200, gin.H{"balance": balance, "currency": currency, "time": time.Now().Unix(), "refID": refID})
 }
